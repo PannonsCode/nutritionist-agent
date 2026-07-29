@@ -6,9 +6,10 @@ pandas>=2.2,<3
 # Su Python 3.9.0 resta su 2.9.x. Con Python >= 3.9.1 / 3.11+ puoi usare pydantic>=2.10.
 pydantic>=2.9,<2.10
 
-# Strato agentico (Agno + Claude)
+# Strato agentico (Agno). Il provider LLM si sceglie con NUTRI_LLM_PROVIDER.
 agno>=2.6,<3
-anthropic>=0.40
+groq>=0.11           # provider di default (Llama 3.3 70B, free tier)
+anthropic>=0.40      # provider alternativo (NUTRI_LLM_PROVIDER=claude)
 
 # API / mock FE
 fastapi>=0.115

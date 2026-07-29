@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from nutri.config import LLM_API_KEY_ENV, LLM_PROVIDER
 from nutri.food_db import get_db
 from nutri.models import DayOptions, DayPlan, MealResult, PlanRequest, WeekPlan
 from nutri.planner import build_day, build_day_options, build_week
@@ -94,10 +95,10 @@ class AssistantRequest(BaseModel):
 @app.post("/assistant")
 def assistant(req: AssistantRequest) -> dict:
     """Dialoga con l'agente e restituisce testo + azioni strutturate per il FE."""
-    if not os.getenv("ANTHROPIC_API_KEY"):
+    if not os.getenv(LLM_API_KEY_ENV):
         raise HTTPException(
             status_code=503,
-            detail="ANTHROPIC_API_KEY non impostata: l'assistente richiede una chiave Claude.",
+            detail=f"{LLM_API_KEY_ENV} non impostata: l'assistente richiede una chiave per il provider '{LLM_PROVIDER}'.",
         )
     import asyncio
     import json
@@ -246,10 +247,10 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 def chat(req: ChatRequest) -> dict:
     """Dialogo in linguaggio naturale con il team Agno (stile chatbot)."""
-    if not os.getenv("ANTHROPIC_API_KEY"):
+    if not os.getenv(LLM_API_KEY_ENV):
         raise HTTPException(
             status_code=503,
-            detail="ANTHROPIC_API_KEY non impostata: l'endpoint /chat richiede una chiave Claude.",
+            detail=f"{LLM_API_KEY_ENV} non impostata: l'endpoint /chat richiede una chiave per il provider '{LLM_PROVIDER}'.",
         )
     # Python 3.9: FastAPI esegue gli endpoint sync in un thread del threadpool
     # privo di event loop; agno crea asyncio.Lock() (all'import e durante run),

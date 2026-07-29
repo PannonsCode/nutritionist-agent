@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+# nutritionist-agent
+An agent capable to create a personalized food plan
+=======
 # Nutritionist Agent
 
 Agente AI per la generazione automatica di piani alimentari bilanciati a partire
@@ -125,3 +129,4 @@ Puoi inoltre guidare la selezione con `alimenti_preferiti`, `alimenti_esclusi` e
 Parametri regolabili in `nutri/config.py`: `MIN_PURITY`, `MIN_DENSITY`,
 `MIN_PORTION_G`, `MAX_PORTION_G`, `TOP_K_PER_POOL`, `PREFERRED_CATEGORIES`,
 `PREFER_RAW`, `UNCOMMON_TERMS`.
+>>>>>>> 3b50ff4 (Deploy setup: render.yaml + .gitignore per demo remota)

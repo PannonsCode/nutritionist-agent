@@ -12,22 +12,56 @@ richiesta in linguaggio naturale e per il dialogo stile chatbot (sezione 8).
 """
 from __future__ import annotations
 
+import os
+
 from agno.agent import Agent
-from agno.models.anthropic import Claude
 from agno.team import Team
 
-from .config import LLM_MODEL_ID
+from .config import LLM_FALLBACK_MODEL, LLM_MODEL_ID, LLM_PROVIDER
 from .tools import MACRO_TOOLS, PLAN_TOOLS, SELECTION_TOOLS
 
 
-def _model() -> Claude:
-    return Claude(id=LLM_MODEL_ID)
+def _model():
+    """Costruisce il modello Agno in base a NUTRI_LLM_PROVIDER.
+
+    Import lazy: viene caricato solo l'SDK del provider effettivamente usato,
+    così non serve avere installati sia `groq` sia `anthropic`.
+    """
+    if LLM_PROVIDER == "claude":
+        from agno.models.anthropic import Claude
+
+        return Claude(id=LLM_MODEL_ID)
+    if LLM_PROVIDER == "groq":
+        from agno.models.groq import Groq
+
+        return Groq(id=LLM_MODEL_ID)
+    raise ValueError(
+        f"NUTRI_LLM_PROVIDER non supportato: {LLM_PROVIDER!r} (usa 'groq' o 'claude')."
+    )
+
+
+def _fallback_config():
+    """Fallback automatico a Claude quando il provider primario fallisce.
+
+    Attivo SOLO se il primario è Groq e ANTHROPIC_API_KEY è impostata (altrimenti
+    il fallback non potrebbe autenticarsi). Copre i rate-limit 429 del free tier
+    (on_rate_limit) e gli errori 5xx/di rete del provider (on_error). Restituisce
+    None quando non applicabile: in tal caso l'errore risale come prima.
+    """
+    if LLM_PROVIDER != "groq" or not os.getenv("ANTHROPIC_API_KEY"):
+        return None
+    from agno.models.anthropic import Claude
+    from agno.models.fallback import FallbackConfig
+
+    claude = Claude(id=LLM_FALLBACK_MODEL)
+    return FallbackConfig(on_rate_limit=[claude], on_error=[claude])
 
 
 def build_macro_agent() -> Agent:
     return Agent(
         name="MacroAgent",
         model=_model(),
+        fallback_config=_fallback_config(),
         tools=MACRO_TOOLS,
         description="Esperto di calcolo dei macronutrienti a partire dalle kcal.",
         instructions=[
@@ -43,6 +77,7 @@ def build_selection_agent() -> Agent:
     return Agent(
         name="SelectionAgent",
         model=_model(),
+        fallback_config=_fallback_config(),
         tools=SELECTION_TOOLS,
         description="Seleziona alimenti e grammature per bilanciare un pasto.",
         instructions=[
@@ -58,6 +93,7 @@ def build_plan_agent() -> Agent:
     return Agent(
         name="PlanAgent",
         model=_model(),
+        fallback_config=_fallback_config(),
         tools=PLAN_TOOLS,
         description="Genera piani alimentari giornalieri e settimanali completi.",
         instructions=[
@@ -111,6 +147,7 @@ def build_assistant_agent() -> Agent:
     return Agent(
         name="Assistant",
         model=_model(),
+        fallback_config=_fallback_config(),
         description="Assistente che modifica il piano nutrizionale tramite azioni.",
         instructions=ASSISTANT_INSTRUCTIONS,
         use_json_mode=True,
@@ -122,6 +159,7 @@ def build_nutrition_team() -> Team:
     return Team(
         name="NutritionTeam",
         model=_model(),
+        fallback_config=_fallback_config(),
         members=[build_macro_agent(), build_selection_agent(), build_plan_agent()],
         instructions=[
             "Sei l'assistente di un nutrizionista per la creazione di piani alimentari.",

@@ -11,6 +11,13 @@ services:
       # Python 3.11 evita il bug di typing di 3.9.0 e permette pydantic recenti.
       - key: PYTHON_VERSION
         value: "3.11.9"
+      # Provider LLM: 'groq' (gratis, open-source) o 'claude' (a pagamento).
+      - key: NUTRI_LLM_PROVIDER
+        value: "groq"
       # Secret: NON committato. Render lo chiede in dashboard al primo deploy.
+      - key: GROQ_API_KEY
+        sync: false
+      # Opzionale: abilita il fallback automatico a Claude se Groq va in
+      # errore/rate-limit. Lascia vuoto per disattivare il fallback.
       - key: ANTHROPIC_API_KEY
         sync: false

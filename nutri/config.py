@@ -106,7 +106,31 @@ UNCOMMON_TERMS = (
     "amido", "manioca", "fecola", "glutine", "crusca", "germe di",
 )
 
-# --- Modello LLM (Agno / Anthropic) ---
-# claude-haiku-4-5 è economico e veloce: ideale perché il lavoro pesante lo
-# fanno i tool deterministici. Sovrascrivibile via variabile d'ambiente.
-LLM_MODEL_ID = os.getenv("NUTRI_LLM_MODEL", "claude-haiku-4-5-20251001")
+# --- Modello LLM (provider-agnostico) ---
+# Il provider si sceglie con NUTRI_LLM_PROVIDER (groq | claude). Il lavoro pesante
+# lo fanno i tool deterministici: all'LLM servono solo comprensione del linguaggio
+# e tool calling, quindi un modello open-source gratuito è sufficiente per una demo.
+#   - groq   -> Llama 3.3 70B servito da Groq (free tier), env GROQ_API_KEY
+#   - claude -> Claude Haiku (a pagamento), env ANTHROPIC_API_KEY
+LLM_PROVIDER = os.getenv("NUTRI_LLM_PROVIDER", "groq").strip().lower()
+
+# Default per provider; sovrascrivibile con NUTRI_LLM_MODEL (utile se Groq ritira
+# un modello: basta cambiare la env, senza toccare il codice né ridistribuire).
+_DEFAULT_MODEL = {
+    "groq": "llama-3.3-70b-versatile",
+    "claude": "claude-haiku-4-5-20251001",
+}
+LLM_MODEL_ID = os.getenv("NUTRI_LLM_MODEL") or _DEFAULT_MODEL.get(
+    LLM_PROVIDER, _DEFAULT_MODEL["groq"]
+)
+
+# Nome della variabile d'ambiente con la chiave richiesta dal provider scelto
+# (usato dagli endpoint per un errore chiaro se manca la key).
+LLM_API_KEY_ENV = {"groq": "GROQ_API_KEY", "claude": "ANTHROPIC_API_KEY"}.get(
+    LLM_PROVIDER, "GROQ_API_KEY"
+)
+
+# Modello di fallback automatico usato se il provider primario (Groq) va in
+# errore o in rate-limit (429). Attivo SOLO con provider=groq e con
+# ANTHROPIC_API_KEY presente; altrimenti nessun fallback (vedi agents._fallback_config).
+LLM_FALLBACK_MODEL = os.getenv("NUTRI_LLM_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
