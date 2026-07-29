@@ -1,0 +1,16 @@
+# Blueprint per il deploy gratuito su Render (https://render.com).
+# Su Render: New > Blueprint, collega il repo GitHub: questo file viene letto in automatico.
+services:
+  - type: web
+    name: nutritionist-agent
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Python 3.11 evita il bug di typing di 3.9.0 e permette pydantic recenti.
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Secret: NON committato. Render lo chiede in dashboard al primo deploy.
+      - key: ANTHROPIC_API_KEY
+        sync: false

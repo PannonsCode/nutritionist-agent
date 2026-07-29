@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Piano Nutrizionale</title>
+<style>
+  :root { --bg:#f5f7fa; --card:#fff; --line:#e3e8ef; --accent:#2e6da4; --muted:#6b7785;
+          --ok:#1e7d34; --warn:#9b6b1c; --err:#9b1c1c; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         margin:0; background:var(--bg); color:#1f2933; }
+  header { background:var(--accent); color:#fff; padding:16px 24px; }
+  header h1 { margin:0; font-size:20px; }
+  main { max-width:1000px; margin:24px auto; padding:0 16px 80px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px;
+          padding:18px; margin-bottom:18px; }
+  label { display:block; font-size:13px; color:var(--muted); margin-bottom:4px; }
+  input, select { padding:7px 9px; border:1px solid var(--line); border-radius:6px;
+                  font-size:14px; width:100%; background:#fff; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:90px; }
+  table { width:100%; border-collapse:collapse; margin-top:6px; font-size:13px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td input.grammi { width:70px; text-align:right; display:inline-block; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px;
+           padding:11px 20px; font-size:15px; cursor:pointer; }
+  button.secondary { background:#eef2f7; color:#1f2933; border:1px solid var(--line); }
+  button.small { padding:5px 10px; font-size:13px; }
+  button.del { background:none; color:var(--err); border:0; padding:2px 6px; font-size:15px; }
+  .meal { border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:16px; }
+  .meal h3 { margin:0 0 4px; color:var(--accent); }
+  .target { font-size:13px; color:var(--muted); margin-bottom:10px; }
+  .macro { margin:12px 0; }
+  .macro h4 { margin:0 0 2px; font-size:14px; text-transform:capitalize; }
+  .macro .hint { font-size:12px; color:var(--muted); }
+  .pill { display:inline-block; background:#eef2f7; border-radius:20px; padding:2px 10px;
+          font-size:12px; color:var(--muted); margin-left:8px; }
+  tr.unselected { opacity:.45; }
+  .add-form { display:none; gap:8px; margin:8px 0; padding:10px; background:#f8fafc;
+              border:1px dashed var(--line); border-radius:8px; }
+  .add-form.open { display:flex; flex-wrap:wrap; align-items:end; }
+  .add-form > div { flex:1; min-width:80px; }
+  .meal-tot { margin-top:10px; padding:10px; background:#f3f7fb; border-radius:8px; font-size:13px; }
+  .meal-tot b { font-variant-numeric:tabular-nums; }
+  .delta-ok { color:var(--ok); } .delta-warn { color:var(--warn); } .delta-err { color:var(--err); }
+  .error { background:#fde8e8; color:var(--err); border:1px solid #f5c2c2;
+           padding:12px; border-radius:8px; white-space:pre-wrap; }
+  .meal-input { border:1px dashed var(--line); border-radius:8px; padding:10px; margin-bottom:10px; }
+  .meal-input .tag { font-weight:600; margin-bottom:6px; }
+  small.note { color:var(--muted); }
+  /* dropdown categorie con checkbox */
+  details.cats { position:relative; }
+  details.cats > summary { list-style:none; cursor:pointer; padding:7px 9px;
+        border:1px solid var(--line); border-radius:6px; font-size:14px; background:#fff;
+        display:flex; justify-content:space-between; align-items:center; }
+  details.cats > summary::-webkit-details-marker { display:none; }
+  details.cats[open] > summary { border-color:var(--accent); }
+  .cats-panel { position:absolute; z-index:10; top:100%; left:0; right:0; margin-top:4px;
+        background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px;
+        max-height:220px; overflow:auto; box-shadow:0 6px 18px rgba(0,0,0,.08); }
+  .cats-panel label { display:flex; gap:8px; align-items:center; font-size:13px;
+        color:#1f2933; margin:0; padding:4px 6px; border-radius:5px; cursor:pointer; }
+  .cats-panel label:hover { background:#eef2f7; }
+  .cats-panel input { width:auto; }
+  .cats-actions { display:flex; gap:8px; margin-bottom:6px; }
+  .cats-actions a { font-size:12px; color:var(--accent); cursor:pointer; text-decoration:underline; }
+  /* report */
+  #report { display:none; }
+  #report table { font-size:13px; }
+  #report .meal-rep { margin-bottom:14px; }
+  .report-actions { display:flex; gap:10px; margin-top:12px; }
+  /* chat widget */
+  #chat-fab { position:fixed; right:22px; bottom:22px; width:56px; height:56px; border-radius:50%;
+        font-size:24px; box-shadow:0 6px 18px rgba(0,0,0,.2); z-index:50; }
+  #chat-panel { position:fixed; right:22px; bottom:90px; width:360px; max-width:calc(100vw - 44px);
+        height:480px; max-height:calc(100vh - 130px); background:#fff; border:1px solid var(--line);
+        border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); z-index:50; display:none;
+        flex-direction:column; overflow:hidden; }
+  #chat-panel.open { display:flex; }
+  #chat-panel .ch-head { background:var(--accent); color:#fff; padding:10px 14px; font-weight:600;
+        display:flex; justify-content:space-between; align-items:center; }
+  #chat-panel .ch-head span.x { cursor:pointer; }
+  #chat-log { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .msg { padding:8px 11px; border-radius:10px; font-size:13px; max-width:85%; white-space:pre-wrap; }
+  .msg.user { align-self:flex-end; background:var(--accent); color:#fff; }
+  .msg.bot { align-self:flex-start; background:#eef2f7; }
+  .msg.sys { align-self:center; background:#fff4e0; color:var(--warn); font-size:12px; }
+  #chat-input-row { display:flex; gap:6px; padding:10px; border-top:1px solid var(--line); }
+  #chat-input-row textarea { flex:1; resize:none; height:42px; font-family:inherit; }
+  #chat-input-row button { padding:8px 14px; }
+  @media print {
+    header, #config-card, #plan, #chat-fab, #chat-panel, .report-actions { display:none !important; }
+    #report { display:block !important; }
+    main { padding:0; }
+  }
+</style>
+</head>
+<body>
+<header><h1>🥗 Piano Nutrizionale</h1></header>
+<main>
+  <!-- STEP 1: configurazione -->
+  <div class="card" id="config-card">
+    <div class="row">
+      <div>
+        <label>Kcal giornaliere totali</label>
+        <input type="number" id="kcal" value="2000" min="500" step="50" />
+      </div>
+      <div>
+        <label>Numero di pasti</label>
+        <input type="number" id="nPasti" value="3" min="1" max="8" />
+      </div>
+      <div>
+        <label>Max alimenti — carbo / proteine / grassi</label>
+        <div class="row">
+          <div><input type="number" id="maxC" placeholder="10" min="1" /></div>
+          <div><input type="number" id="maxP" placeholder="10" min="1" /></div>
+          <div><input type="number" id="maxG" placeholder="6" min="1" /></div>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div>
+        <label>Alimenti preferiti (separati da virgola)</label>
+        <input type="text" id="preferiti" placeholder="es. pollo, riso, tonno" />
+      </div>
+      <div>
+        <label>Alimenti esclusi (separati da virgola)</label>
+        <input type="text" id="esclusi" placeholder="es. maiale" />
+      </div>
+    </div>
+
+    <h3 style="margin:18px 0 8px">Pasti</h3>
+    <small class="note">Per ogni pasto: tipo, % delle kcal giornaliere e suddivisione % dei macro (devono sommare a 100).</small>
+    <div id="pasti"></div>
+
+    <div style="margin-top:14px; display:flex; gap:10px;">
+      <button id="genera">Genera opzioni →</button>
+      <button class="secondary" id="reset">Ripristina pasti</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: scelte editabili -->
+  <div id="plan"></div>
+
+  <!-- STEP 3: report -->
+  <div class="card" id="report"></div>
+</main>
+
+<!-- CHAT WIDGET -->
+<button id="chat-fab" title="Assistente AI">💬</button>
+<div id="chat-panel">
+  <div class="ch-head"><span>Assistente nutrizionale</span><span class="x" id="chat-close">✕</span></div>
+  <div id="chat-log"></div>
+  <div id="chat-input-row">
+    <textarea id="chat-text" placeholder="Scrivi una domanda… (es. quante kcal per 60g di pasta?)"></textarea>
+    <button id="chat-send">Invia</button>
+  </div>
+</div>
+
+<script>
+const MACROS = ["carbo", "proteine", "grassi"];
+let CATEGORIE = [];
+let CONSIGLIATE = new Set();
+const TIPI_PASTO_DEFAULT = ["colazione", "pranzo", "cena", "spuntino"];
+let TIPI_PASTO = TIPI_PASTO_DEFAULT.slice();
+
+const fmt = (x) => (Math.round((x || 0) * 10) / 10).toLocaleString("it-IT");
+const kcalAtwater = (c, p, g) => 4 * c + 4 * p + 9 * g;
+
+/* ---------- STEP 1: form configurazione ---------- */
+function tipoPastoSelect(i) {
+  const ordine = ["colazione", "pranzo", "cena", "spuntino"];
+  const def = ordine[i] || "spuntino";
+  const opts = TIPI_PASTO.map(t =>
+    `<option value="${t}"${t === def ? " selected" : ""}>${t}</option>`).join("");
+  return `<select class="m-tipo"><option value="">— nessun filtro —</option>${opts}</select>`;
+}
+
+function catsDropdown() {
+  const items = CATEGORIE.map(c => {
+    const checked = CONSIGLIATE.has(c) ? " checked" : "";
+    return `<label><input type="checkbox" class="m-cat" value="${c}"${checked} /> ${c}</label>`;
+  }).join("");
+  return `
+  <details class="cats">
+    <summary><span class="cats-label">Tutte le categorie</span><span>▾</span></summary>
+    <div class="cats-panel">
+      <div class="cats-actions">
+        <a data-act="all">Seleziona tutto</a><a data-act="none">Deseleziona</a>
+      </div>${items}
+    </div>
+  </details>`;
+}
+
+function mealInputRow(i) {
+  const def = i === 0 ? {nome:"Colazione", kcal:25, c:55, p:25, g:20}
+            : i === 1 ? {nome:"Pranzo", kcal:40, c:50, p:30, g:20}
+            : i === 2 ? {nome:"Cena", kcal:35, c:45, p:35, g:20}
+            : {nome:"Pasto "+(i+1), kcal:0, c:50, p:30, g:20};
+  return `
+  <div class="meal-input" data-meal="${i}">
+    <div class="tag">Pasto ${i+1}</div>
+    <div class="row">
+      <div><label>Nome</label><input class="m-nome" value="${def.nome}" /></div>
+      <div><label>Tipo pasto</label>${tipoPastoSelect(i)}</div>
+      <div><label>% kcal</label><input class="m-kcal" type="number" value="${def.kcal}" min="0" max="100" /></div>
+      <div><label>% carbo</label><input class="m-c" type="number" value="${def.c}" min="0" max="100" /></div>
+      <div><label>% proteine</label><input class="m-p" type="number" value="${def.p}" min="0" max="100" /></div>
+      <div><label>% grassi</label><input class="m-g" type="number" value="${def.g}" min="0" max="100" /></div>
+    </div>
+    <div style="margin-top:8px">
+      <label>Categorie da includere (vuoto = tutte)</label>${catsDropdown()}
+    </div>
+  </div>`;
+}
+
+function renderMealInputs() {
+  const n = Math.max(1, parseInt(document.getElementById("nPasti").value || "1"));
+  let html = "";
+  for (let i = 0; i < n; i++) html += mealInputRow(i);
+  document.getElementById("pasti").innerHTML = html;
+  wireCategoryDropdowns();
+}
+
+function wireCategoryDropdowns() {
+  document.querySelectorAll(".meal-input").forEach(meal => {
+    const det = meal.querySelector("details.cats");
+    if (!det) return;
+    const labelEl = det.querySelector(".cats-label");
+    const boxes = [...det.querySelectorAll(".m-cat")];
+    const refresh = () => {
+      const sel = boxes.filter(b => b.checked).map(b => b.value);
+      labelEl.textContent = sel.length === 0 ? "Tutte le categorie"
+        : sel.length === 1 ? sel[0] : sel.length + " categorie selezionate";
+    };
+    boxes.forEach(b => b.addEventListener("change", refresh));
+    refresh();
+    det.querySelectorAll(".cats-actions a").forEach(a => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        boxes.forEach(b => { b.checked = a.dataset.act === "all"; });
+        refresh();
+      });
+    });
+  });
+}
+
+document.getElementById("nPasti").addEventListener("change", renderMealInputs);
+document.getElementById("reset").addEventListener("click", renderMealInputs);
+
+function splitList(s) { return (s || "").split(",").map(x => x.trim()).filter(Boolean); }
+
+function buildPayload() {
+  const meals = [...document.querySelectorAll(".meal-input")].map(el => {
+    const num = (sel) => parseFloat(el.querySelector(sel).value || "0");
+    const cats = [...el.querySelectorAll(".m-cat")].filter(b => b.checked).map(b => b.value);
+    return {
+      nome: el.querySelector(".m-nome").value || "Pasto",
+      kcal_percent: num(".m-kcal") / 100,
+      macro_split: { carbo: num(".m-c")/100, proteine: num(".m-p")/100, grassi: num(".m-g")/100 },
+      categorie_incluse: cats,
+      tipo_pasto: el.querySelector(".m-tipo").value || null,
+    };
+  });
+  return {
+    kcal_target: parseFloat(document.getElementById("kcal").value || "0"),
+    pasti: meals,
+    alimenti_preferiti: splitList(document.getElementById("preferiti").value),
+    alimenti_esclusi: splitList(document.getElementById("esclusi").value),
+    categorie_escluse: [],
+  };
+}
+
+function queryString() {
+  const params = new URLSearchParams();
+  const map = { maxC: "max_carbo", maxP: "max_proteine", maxG: "max_grassi" };
+  for (const [id, key] of Object.entries(map)) {
+    const v = document.getElementById(id).value;
+    if (v) params.set(key, v);
+  }
+  const s = params.toString();
+  return s ? "?" + s : "";
+}
+
+/* ---------- STEP 2: scelte editabili ---------- */
+function foodRow(o) {
+  return `<tr class="food" data-c100="${o.carbo_100}" data-p100="${o.proteine_100}" data-g100="${o.grassi_100}">
+    <td><input type="checkbox" class="sel" checked></td>
+    <td class="nome">${o.nome}</td>
+    <td class="cat">${o.categoria || ""}</td>
+    <td class="num"><input type="number" class="grammi" value="${o.grammi}" min="0" step="5"> g</td>
+    <td class="num cell-kcal"></td>
+    <td class="num cell-c"></td>
+    <td class="num cell-p"></td>
+    <td class="num cell-g"></td>
+    <td><button class="del" title="Rimuovi">✕</button></td>
+  </tr>`;
+}
+
+function macroBlock(mi, macro, opts, targetG) {
+  const rows = opts.map(foodRow).join("");
+  return `<div class="macro" data-macro="${macro}">
+    <h4>${macro} <span class="pill">~${fmt(targetG)} g ${macro} target</span></h4>
+    <div class="hint">Spunta gli alimenti da tenere, modifica i grammi (kcal e macro si aggiornano).</div>
+    <table>
+      <thead><tr><th></th><th>Alimento</th><th>Categoria</th><th class="num">Grammi</th>
+        <th class="num">Kcal</th><th class="num">C</th><th class="num">P</th><th class="num">G</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="add-form" data-meal="${mi}" data-macro="${macro}">
+      <div><label>Nome</label><input class="af-nome" placeholder="alimento"></div>
+      <div><label>C /100g</label><input class="af-c" type="number" value="0" min="0"></div>
+      <div><label>P /100g</label><input class="af-p" type="number" value="0" min="0"></div>
+      <div><label>G /100g</label><input class="af-g" type="number" value="0" min="0"></div>
+      <div><label>Grammi</label><input class="af-grammi" type="number" value="100" min="0"></div>
+      <div style="flex:0"><button class="small af-add">Aggiungi</button></div>
+    </div>
+    <button class="secondary small add-food" data-meal="${mi}" data-macro="${macro}">+ Aggiungi alimento</button>
+  </div>`;
+}
+
+function renderPlan(data) {
+  let html = "";
+  data.pasti.forEach((pasto, mi) => {
+    const t = pasto.target;
+    html += `<div class="card meal" data-meal="${mi}" data-nome="${pasto.nome}" data-tipo="${pasto._tipo || ""}"
+      data-tk="${t.kcal}" data-tc="${t.carbo_g}" data-tp="${t.proteine_g}" data-tg="${t.grassi_g}">
+      <h3>${pasto.nome}</h3>
+      <div class="target">Target: <b>${fmt(t.kcal)} kcal</b> — C ${fmt(t.carbo_g)} g · P ${fmt(t.proteine_g)} g · G ${fmt(t.grassi_g)} g</div>`;
+    for (const macro of MACROS) {
+      html += macroBlock(mi, macro, pasto.opzioni[macro] || [], t[macro + "_g"]);
+    }
+    html += `<div class="meal-tot"></div></div>`;
+  });
+  html += `<div class="card" style="display:flex; gap:10px; align-items:center">
+      <button id="avanti">Avanti → genera report</button>
+      <small class="note">Tieni gli alimenti spuntati e regola i grammi; poi genera il report.</small>
+    </div>`;
+  const plan = document.getElementById("plan");
+  plan.innerHTML = html;
+  plan.querySelectorAll(".meal").forEach(recomputeMeal);
+  document.getElementById("report").style.display = "none";
+  plan.scrollIntoView({ behavior: "smooth" });
+}
+
+function recomputeRow(tr) {
+  const grams = parseFloat(tr.querySelector(".grammi").value) || 0;
+  const c = (+tr.dataset.c100) / 100 * grams;
+  const p = (+tr.dataset.p100) / 100 * grams;
+  const g = (+tr.dataset.g100) / 100 * grams;
+  const kcal = kcalAtwater(c, p, g);
+  tr.querySelector(".cell-kcal").textContent = fmt(kcal);
+  tr.querySelector(".cell-c").textContent = fmt(c);
+  tr.querySelector(".cell-p").textContent = fmt(p);
+  tr.querySelector(".cell-g").textContent = fmt(g);
+  const sel = tr.querySelector(".sel").checked;
+  tr.classList.toggle("unselected", !sel);
+  return sel ? { kcal, c, p, g } : { kcal: 0, c: 0, p: 0, g: 0 };
+}
+
+// Media dei macro/kcal degli alimenti selezionati in un blocco macro (= valore
+// atteso scegliendone 1). 0 se nessuno selezionato.
+function macroMean(block) {
+  const rows = [...block.querySelectorAll("tr.food")].filter(tr => tr.querySelector(".sel").checked);
+  if (rows.length === 0) return { kcal: 0, c: 0, p: 0, g: 0, n: 0 };
+  let k = 0, c = 0, p = 0, g = 0;
+  rows.forEach(tr => {
+    const grams = parseFloat(tr.querySelector(".grammi").value) || 0;
+    const cc = (+tr.dataset.c100)/100*grams, pp = (+tr.dataset.p100)/100*grams, gg = (+tr.dataset.g100)/100*grams;
+    k += kcalAtwater(cc, pp, gg); c += cc; p += pp; g += gg;
+  });
+  const n = rows.length;
+  return { kcal: k/n, c: c/n, p: p/n, g: g/n, n };
+}
+
+// Totale "atteso" del pasto = somma delle medie per macro (media su tutte le
+// combinazioni di 1 alimento per macronutriente).
+function mealAverages(meal) {
+  let tk = 0, tc = 0, tp = 0, tg = 0;
+  meal.querySelectorAll(".macro").forEach(block => {
+    const m = macroMean(block);
+    tk += m.kcal; tc += m.c; tp += m.p; tg += m.g;
+  });
+  return { kcal: tk, c: tc, p: tp, g: tg };
+}
+
+function recomputeMeal(meal) {
+  meal.querySelectorAll("tr.food").forEach(recomputeRow); // aggiorna le celle di ogni riga
+  const t = mealAverages(meal);
+  const TK = +meal.dataset.tk, TC = +meal.dataset.tc, TP = +meal.dataset.tp, TG = +meal.dataset.tg;
+  const dk = t.kcal - TK;
+  const cls = Math.abs(dk) <= TK * 0.05 ? "delta-ok" : Math.abs(dk) <= TK * 0.15 ? "delta-warn" : "delta-err";
+  meal.querySelector(".meal-tot").innerHTML =
+    `Media (1 alimento per macro): <b>${fmt(t.kcal)} kcal</b> (target ${fmt(TK)}, <span class="${cls}">Δ ${dk >= 0 ? "+" : ""}${fmt(dk)} kcal</span>) — ` +
+    `C <b>${fmt(t.c)}</b>/${fmt(TC)} · P <b>${fmt(t.p)}</b>/${fmt(TP)} · G <b>${fmt(t.g)}</b>/${fmt(TG)} g`;
+}
+
+// event delegation sullo step 2
+document.getElementById("plan").addEventListener("input", (e) => {
+  if (e.target.classList.contains("grammi")) recomputeMeal(e.target.closest(".meal"));
+});
+document.getElementById("plan").addEventListener("change", (e) => {
+  if (e.target.classList.contains("sel")) recomputeMeal(e.target.closest(".meal"));
+});
+document.getElementById("plan").addEventListener("click", (e) => {
+  if (e.target.classList.contains("del")) {
+    const meal = e.target.closest(".meal");
+    e.target.closest("tr").remove();
+    recomputeMeal(meal);
+  } else if (e.target.classList.contains("add-food")) {
+    e.target.previousElementSibling.classList.toggle("open");
+  } else if (e.target.classList.contains("af-add")) {
+    const form = e.target.closest(".add-form");
+    const v = (s) => form.querySelector(s).value;
+    const nome = v(".af-nome").trim();
+    if (!nome) { form.querySelector(".af-nome").focus(); return; }
+    const o = {
+      nome, categoria: "(aggiunto)",
+      carbo_100: +v(".af-c") || 0, proteine_100: +v(".af-p") || 0, grassi_100: +v(".af-g") || 0,
+      grammi: +v(".af-grammi") || 0, kcal: 0, carbo_g: 0, proteine_g: 0, grassi_g: 0,
+    };
+    const tbody = form.closest(".macro").querySelector("tbody");
+    tbody.insertAdjacentHTML("beforeend", foodRow(o));
+    form.classList.remove("open");
+    ["af-nome","af-c","af-p","af-g"].forEach(c => form.querySelector("."+c).value = c==="af-nome"?"":"0");
+    recomputeMeal(form.closest(".meal"));
+  } else if (e.target.id === "avanti") {
+    buildReport();
+  }
+});
+
+let LAST_PAYLOAD = null;
+async function generaPiano() {
+  const btn = document.getElementById("genera");
+  btn.disabled = true; btn.textContent = "Genero…";
+  try {
+    LAST_PAYLOAD = buildPayload();
+    const res = await fetch("/plan/options" + queryString(), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(LAST_PAYLOAD),
+    });
+    const data = await res.json();
+    if (!res.ok) { showError(data.detail || "Errore sconosciuto"); return; }
+    // porta il tipo_pasto nello stato renderizzato (non è nella risposta)
+    data.pasti.forEach((p, i) => { p._tipo = (LAST_PAYLOAD.pasti[i] || {}).tipo_pasto || null; });
+    renderPlan(data);
+  } catch (e) { showError("Errore di rete: " + e.message); }
+  finally { btn.disabled = false; btn.textContent = "Genera opzioni →"; }
+}
+document.getElementById("genera").addEventListener("click", generaPiano);
+
+function showError(detail) {
+  let msg = detail;
+  if (Array.isArray(detail)) msg = detail.map(e => `• ${(e.loc || []).join(".")}: ${e.msg}`).join("\n");
+  else if (typeof detail === "object") msg = JSON.stringify(detail, null, 2);
+  document.getElementById("plan").innerHTML = `<div class="card error">⚠️ ${msg}</div>`;
+}
+
+/* ---------- STEP 3: report ---------- */
+function buildReport() {
+  let gk = 0, gc = 0, gp = 0, gg = 0;
+  let html = `<h2 style="margin-top:0;color:var(--accent)">Report piano nutrizionale</h2>
+    <small class="note">Per ogni pasto e categoria sono elencate le alternative equivalenti: se ne sceglie 1 per categoria. I totali sono la media (1 alimento per macro).</small>`;
+  document.querySelectorAll("#plan .meal").forEach(meal => {
+    const nome = meal.dataset.nome;
+    let body = "";
+    let any = false;
+    MACROS.forEach(macro => {
+      const block = meal.querySelector(`.macro[data-macro="${macro}"]`);
+      const rows = [...block.querySelectorAll("tr.food")].filter(tr => tr.querySelector(".sel").checked);
+      if (rows.length === 0) return;
+      any = true;
+      rows.forEach((tr, idx) => {
+        const grams = parseFloat(tr.querySelector(".grammi").value) || 0;
+        const c = (+tr.dataset.c100)/100*grams, p = (+tr.dataset.p100)/100*grams, g = (+tr.dataset.g100)/100*grams;
+        const k = kcalAtwater(c, p, g);
+        body += `<tr><td>${idx === 0 ? macro : ""}</td><td>${tr.querySelector(".nome").textContent}</td>
+          <td class="num">${fmt(grams)} g</td><td class="num">${fmt(k)}</td>
+          <td class="num">${fmt(c)}</td><td class="num">${fmt(p)}</td><td class="num">${fmt(g)}</td></tr>`;
+      });
+    });
+    if (!any) return;
+    const t = mealAverages(meal);
+    gk += t.kcal; gc += t.c; gp += t.p; gg += t.g;
+    html += `<div class="meal-rep"><h3 style="margin:6px 0">${nome}</h3>
+      <table><thead><tr><th>Categoria</th><th>Alimento (alternative)</th><th class="num">Grammi</th>
+        <th class="num">Kcal</th><th class="num">C</th><th class="num">P</th><th class="num">G</th></tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot><tr><th colspan="3">Media ${nome} (1 per categoria)</th><th class="num">${fmt(t.kcal)}</th>
+        <th class="num">${fmt(t.c)}</th><th class="num">${fmt(t.p)}</th><th class="num">${fmt(t.g)}</th></tr></tfoot>
+      </table></div>`;
+  });
+  html += `<div class="meal-tot" style="font-size:14px"><b>TOTALE GIORNATA (media): ${fmt(gk)} kcal</b> —
+    Carboidrati ${fmt(gc)} g · Proteine ${fmt(gp)} g · Grassi ${fmt(gg)} g</div>`;
+  html += `<div class="report-actions">
+      <button onclick="window.print()">🖨️ Stampa / Salva PDF</button>
+      <button class="secondary" onclick="document.getElementById('plan').scrollIntoView({behavior:'smooth'})">← Modifica scelte</button>
+    </div>`;
+  const rep = document.getElementById("report");
+  rep.innerHTML = html;
+  rep.style.display = "block";
+  rep.scrollIntoView({ behavior: "smooth" });
+}
+
+/* ---------- CHAT widget ---------- */
+const SESSION_ID = "fe-" + Math.random().toString(36).slice(2);
+function addMsg(text, cls) {
+  const log = document.getElementById("chat-log");
+  const d = document.createElement("div");
+  d.className = "msg " + cls; d.textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+document.getElementById("chat-fab").addEventListener("click", () =>
+  document.getElementById("chat-panel").classList.toggle("open"));
+document.getElementById("chat-close").addEventListener("click", () =>
+  document.getElementById("chat-panel").classList.remove("open"));
+
+// Stato corrente del piano inviato all'agente
+function collectState() {
+  const meals = [...document.querySelectorAll("#plan .meal")].map(meal => {
+    const opzioni = {};
+    MACROS.forEach(macro => {
+      const block = meal.querySelector(`.macro[data-macro="${macro}"]`);
+      opzioni[macro] = [...block.querySelectorAll("tr.food")].map(tr => ({
+        nome: tr.querySelector(".nome").textContent,
+        grammi: parseFloat(tr.querySelector(".grammi").value) || 0,
+        selezionato: tr.querySelector(".sel").checked,
+      }));
+    });
+    return { nome: meal.dataset.nome, tipo_pasto: meal.dataset.tipo || null, opzioni };
+  });
+  return {
+    kcal_target: parseFloat(document.getElementById("kcal").value || "0"),
+    generato: meals.length > 0,
+    pasti: meals,
+  };
+}
+
+const pct = (v) => v == null ? 0 : (v <= 1 ? v * 100 : v); // accetta frazione o %
+
+function findMeal(nome) {
+  const meals = [...document.querySelectorAll("#plan .meal")];
+  const q = (nome || "").toLowerCase();
+  return meals.find(m => m.dataset.nome.toLowerCase() === q)
+      || meals.find(m => m.dataset.nome.toLowerCase().includes(q));
+}
+function findRow(meal, macro, nome) {
+  const block = meal.querySelector(`.macro[data-macro="${macro}"]`);
+  if (!block) return null;
+  const q = (nome || "").toLowerCase();
+  return [...block.querySelectorAll("tr.food")]
+    .find(tr => tr.querySelector(".nome").textContent.toLowerCase().includes(q)) || null;
+}
+
+async function resolveFood(nome) {
+  try {
+    const r = await fetch("/food?nome=" + encodeURIComponent(nome));
+    if (r.ok) return await r.json();
+  } catch (e) {}
+  return null;
+}
+
+async function applyConfig(a) {
+  document.getElementById("kcal").value = a.kcal_target || document.getElementById("kcal").value;
+  const pasti = a.pasti || [];
+  if (pasti.length) document.getElementById("nPasti").value = pasti.length;
+  renderMealInputs();
+  const inputs = [...document.querySelectorAll(".meal-input")];
+  pasti.forEach((p, i) => {
+    const el = inputs[i]; if (!el) return;
+    el.querySelector(".m-nome").value = p.nome || ("Pasto " + (i + 1));
+    const ts = el.querySelector(".m-tipo"); if (ts && p.tipo_pasto) ts.value = p.tipo_pasto;
+    el.querySelector(".m-kcal").value = pct(p.kcal_percent);
+    el.querySelector(".m-c").value = pct(p.carbo);
+    el.querySelector(".m-p").value = pct(p.proteine);
+    el.querySelector(".m-g").value = pct(p.grassi);
+    if (p.categorie_incluse && p.categorie_incluse.length) {
+      const set = new Set(p.categorie_incluse.map(s => s.toLowerCase()));
+      const boxes = [...el.querySelectorAll(".m-cat")];
+      boxes.forEach(b => { b.checked = set.has(b.value.toLowerCase()); });
+      if (boxes[0]) boxes[0].dispatchEvent(new Event("change")); // aggiorna etichetta
+    }
+  });
+  await generaPiano();
+}
+
+async function applyActions(azioni) {
+  let applicate = 0;
+  for (const a of (azioni || [])) {
+    try {
+      if (a.tipo === "set_config") { await applyConfig(a); applicate++; continue; }
+      const meal = findMeal(a.pasto);
+      if (!meal) continue;
+      if (a.tipo === "add_food") {
+        let c100 = a.carbo_100, p100 = a.proteine_100, g100 = a.grassi_100, nome = a.nome, cat = "(aggiunto)";
+        if (c100 == null && p100 == null && g100 == null) {
+          const f = await resolveFood(a.nome);
+          if (f) { c100 = f.carbo_100; p100 = f.proteine_100; g100 = f.grassi_100; nome = f.nome; cat = f.categoria; }
+        }
+        const block = meal.querySelector(`.macro[data-macro="${a.macro}"]`);
+        if (!block) continue;
+        block.querySelector("tbody").insertAdjacentHTML("beforeend", foodRow({
+          nome, categoria: cat, grammi: a.grammi || 100,
+          carbo_100: c100 || 0, proteine_100: p100 || 0, grassi_100: g100 || 0,
+        }));
+        recomputeMeal(meal); applicate++;
+      } else if (a.tipo === "remove_food") {
+        const row = findRow(meal, a.macro, a.nome);
+        if (row) { row.remove(); recomputeMeal(meal); applicate++; }
+      } else if (a.tipo === "set_grams") {
+        const row = findRow(meal, a.macro, a.nome);
+        if (row && a.grammi != null) { row.querySelector(".grammi").value = a.grammi; recomputeMeal(meal); applicate++; }
+      } else if (a.tipo === "toggle_food") {
+        const row = findRow(meal, a.macro, a.nome);
+        if (row && a.selezionato != null) { row.querySelector(".sel").checked = !!a.selezionato; recomputeMeal(meal); applicate++; }
+      }
+    } catch (e) { /* ignora azione non applicabile */ }
+  }
+  return applicate;
+}
+
+async function sendChat() {
+  const ta = document.getElementById("chat-text");
+  const msg = ta.value.trim();
+  if (!msg) return;
+  ta.value = "";
+  addMsg(msg, "user");
+  const thinking = addMsg("…", "bot");
+  try {
+    const res = await fetch("/assistant", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messaggio: msg, stato: collectState(), session_id: SESSION_ID }),
+    });
+    const data = await res.json();
+    if (res.status === 503) { thinking.textContent = "⚠️ Assistente non disponibile: manca ANTHROPIC_API_KEY nel server."; return; }
+    if (!res.ok) { thinking.textContent = "⚠️ " + (typeof data.detail === "string" ? data.detail : "errore"); return; }
+    thinking.textContent = data.risposta || "(nessuna risposta)";
+    const n = await applyActions(data.azioni);
+    if (n > 0) addMsg(`✓ ${n} ${n === 1 ? "azione applicata" : "azioni applicate"} al piano.`, "sys");
+  } catch (e) { thinking.textContent = "⚠️ Errore di rete: " + e.message; }
+}
+document.getElementById("chat-send").addEventListener("click", sendChat);
+document.getElementById("chat-text").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+
+/* ---------- init ---------- */
+async function loadCategories() {
+  try {
+    const res = await fetch("/categories");
+    const data = await res.json();
+    CATEGORIE = data.categorie || [];
+    CONSIGLIATE = new Set(data.consigliate || []);
+    TIPI_PASTO = (data.tipi_pasto && data.tipi_pasto.length) ? data.tipi_pasto : TIPI_PASTO_DEFAULT.slice();
+  } catch (e) { CATEGORIE = []; CONSIGLIATE = new Set(); TIPI_PASTO = TIPI_PASTO_DEFAULT.slice(); }
+  renderMealInputs();
+}
+loadCategories();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# CSV grezzi/di lavoro (l'app usa solo data/alimenti.csv)
+/alimenti.csv
+/alimenti2.csv
+/alimenti_completo.csv
+/alimenti_filtrato.csv
+/alimenti_filtrato_completo.csv
